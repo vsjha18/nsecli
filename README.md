@@ -1,5 +1,4 @@
-nsecli
-======
+[ ** This project is under development and will be production ready by March 31st, 2014 **]
 
 Introduction
 --------------
