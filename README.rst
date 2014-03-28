@@ -22,7 +22,6 @@ This is a para after that
 I am back
 
 This is one more bullet
-
 #. this is item one
 #. this is item two
 
