@@ -22,6 +22,20 @@ This is a para after that
 I am back
 
 This is one more bullet
+
 #. this is item one
 #. this is item two
+
+Here is soem code ::
+
+	>>> code 1
+	>>> code 2
+	$ code 3
+	
+
+This is a link_
+
+.. _link: http://www.google.com
+
+
 
