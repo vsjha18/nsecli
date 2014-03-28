@@ -20,3 +20,9 @@ This is a para after that
 	More note
 	
 I am back
+
+This is one more bullet
+
+#. this is item one
+#. this is item two
+
