@@ -1,0 +1,8 @@
+Core features:
+- top gainers
+- top losers 
+- top volume
+- corporate actions
+- advance_declines
+- show indices
+- 
