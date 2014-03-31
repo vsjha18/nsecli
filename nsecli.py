@@ -29,7 +29,7 @@ class Stock(object):
     def refresh(self):
         ''' refetches the stock price '''
         pass
-    def show_quote(self):
+    def show_quote(self, quote):
         for key, value in self.__dict__.items():
             print key, '::', value
 
@@ -77,6 +77,18 @@ class NseDriver(object):
             sys.exit()
         else:
             return quote
+
+    def show_quote(self, quote):
+        ''' controls the display of a quote '''
+        display_fields = self.db.get_config_setting('DISPLAY_FILEDS')
+        for key in display_fields:
+            if key in quote:
+                if key == 'pChange':
+                    print key, ':', quote[key], '%'
+                else:
+                    print key, ':', quote[key]
+            else:
+                print key, 'is not present in the quote'
 
     def build_headers(self):
         ''' builds the headers for making http request '''
@@ -178,6 +190,7 @@ class DB(object):
                     c.execute('INSERT INTO STOCKS (CODE,NAME) VALUES("%s","%s")' % (code,name))
         except Exception, e:
             self.log.error('error while inserting rows to stocks table from csv file')
+            self.log.error(str(e))
             self.db.rollback()
         else:
             self.db.commit()
@@ -191,15 +204,42 @@ class DB(object):
         try:
             self.db.execute('CREATE TABLE CONFIG\
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,\
-                            DISPLAY_FILEDS TEXT)')
+                            SETTING TEXT, VALUE TEXT)')
         except Exception, e:
             self.log.error('config table already exists !!')
             print str(e)
             sys.exit()
         self.log.debug('config table created')
 
+        # create a row with default fileds to show
         c = self.db.cursor()
-        display_fields =None
+        try:
+            # TODO: SETTING field must be unique
+            c.execute("INSERT INTO CONFIG (SETTING, VALUE) VALUES(\
+                      'DISPLAY_FILEDS', \
+                      'lastPrice change pChange open dayHigh dayLow closePrice previousClose high52 low52')")
+        except Exception, err:
+            self.log.error('error while inserting DISPLAY_FILEDS setting')
+            self.log.error(str(err))
+            self.db.rollback()
+            sys.exit()
+        else:
+            self.db.commit()
+            self.log.debug('DISPLAY_FILEDS setting inserted successfully')
+
+    def get_config_setting(self, setting):
+        ''' return setting as a list of strings'''
+        self.log.debug('getting config setting for %s' % setting)
+        c = self.db.cursor()
+        try:
+            c.execute('SELECT VALUE FROM CONFIG WHERE SETTING = "%s"' % setting)
+        except Exception, err:
+            self.log.error('error while fetching setting %s' % setting)
+            self.log.error(str(err))
+            sys.exit()
+        res = c.fetchone()[0].split()
+        return [str(x) for x in res]
+
 
     def get_all_stock_list(self):
         ''' returns a dict with all stock codes as
@@ -246,6 +286,5 @@ if db.init is False:
     db.create_stocks_table(nse.download_stock_csv())
     db.init = True
     db.create_config_table()
-log.info('getting stock info')
-print nse.get_quote(cli.code)
+nse.show_quote(nse.get_quote(cli.code))
 # TODO: return a stock object which is capable of display functions
