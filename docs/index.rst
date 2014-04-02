@@ -10,6 +10,13 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   
+Introduction
+------------
+This is a command line interface to National Stock Exchange (NSE). You will have access to all the important features,
+like checking the stock price and controlling your view etc.
+
+This is not just much faster than accessing the web but also more handy in case you are working in a unix envronment.
 
 
 
