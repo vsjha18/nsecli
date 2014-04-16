@@ -4,54 +4,51 @@ try:
     from cookielib import CookieJar
     import urllib2
     import urllib
-    import lxml.etree
+    # import lxml.etree
     import ast
     import sys
     import sqlite3
     import os
     import argparse
     import logging
+    import re
 except Exception, err:
     print 'error while importing module or package'
     print str(err)
     exit()
 
-
-class NseDisplay(object):
-    ''' NseDisplay contains all the function related to displaying
-    and controlling display of results and quotes.
-    '''
+class NseCliApp(object):
     def __init__(self, db):
-        global LOG_LEVEL
-        logging.basicConfig(level=LOG_LEVEL)
-        self.log = logging.getLogger('NseDisplay')
         self.db = db
 
-    def show_quote(self, quote):
-        ''' controls the display of a quote '''
-        display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
-        for key in display_fields:
-            if key in quote:
-                if key == 'pChange':
-                    print key, ':', quote[key], '%'
-                else:
-                    print key, ':', quote[key]
-            else:
-                print key, 'is not present in the quote'
+    def init_db(self):
+        ''' initialyzes the database '''
+        db.create_stocks_table(nse.download_stock_csv())
+        db.create_config_table()
+        db.init = True
 
-    def show_current_display_fields(self):
+    def get_current_display_fields(self):
         ''' shows current display fields '''
         display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
-        print 'Current display fields:'
-        for field in display_fields:
-            print field
+        return display_fields
 
-    def show_all_display_fields(self):
+    def get_display_fields(self):
+        ''' returns a list of all the fields to be displayed '''
+        display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
+        return display_fields
+        # for key in display_fields:
+        #     if key in quote:
+        #         if key == 'pChange':
+        #             print key, ':', quote[key], '%'
+        #         else:
+        #             print key, ':', quote[key]
+        #     else:
+        #         print key, 'is not present in the quote'
+
+    def get_all_display_fields(self):
         ''' shows all display fields '''
         all_display_fields = self.db.get_config_setting('ALL_DISPLAY_FIELDS')
-        print 'All display fields:'
-        for field in all_display_fields:
-            print field
+        return all_display_fields
 
     def add_display_fields(self, fields):
         ''' adds all the display fields '''
@@ -111,6 +108,41 @@ class NseDisplay(object):
         self.db.update_config_setting('DISPLAY_FIELDS', default_display_fields)
 
 
+
+class NseDisplay(object):
+    ''' NseDisplay contains all the function related to displaying
+    and controlling display of results and quotes.
+    '''
+    def __init__(self, db):
+        global LOG_LEVEL
+        logging.basicConfig(level=LOG_LEVEL)
+        self.log = logging.getLogger('NseDisplay')
+        self.db = db
+
+    def show_quote(self, quote, display_fields, stock_name = None):
+        ''' displays the quote based on the list of display fields
+        quote is dictionary received from NSE
+        '''
+        print stock_name
+        print '-----------------------'
+        for field in display_fields:
+            if field == 'pChange':
+                print '%-15s : %s' % (field, quote[field]) + '%'
+            else:
+                print '%-15s : %s' % (field, quote[field])
+                # print field, ':', quote[field]
+
+        #TODO: check if the quote contains that field
+
+
+    def show_current_display_fields(self, fields):
+        ''' shows current display fields '''
+        print 'Current display fields:'
+        for field in fields:
+            print field
+
+
+
 class NseDriver(object):
     ''' it accepts a Stock object and fetches it price
     assosiated information'''
@@ -122,6 +154,7 @@ class NseDriver(object):
         self.log = logging.getLogger('NseDriver')
         self.db = db
         self.baseurl = 'http://nseindia.com/live_market/dynaContent/live_watch/get_quote/GetQuote.jsp?'
+        self.top_gainer_url = 'http://www.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json'
         self.opener = self.build_opener()
         self.headers = self.build_headers()
         self.xpath = '//*[@id="responseDiv"]'
@@ -143,13 +176,20 @@ class NseDriver(object):
             self.log.error(str(error))
             sys.exit()
         try:
-            parser = lxml.etree.HTMLParser(encoding='utf-8')
-            tree = lxml.etree.fromstring(res.read(), parser)
-            # doi = data of interest
-            doi = tree.xpath(self.xpath)
-            quote = ast.literal_eval(doi[0].text.strip())['data'][0]
+            match = re.search(\
+                    r'\{<div\s+id="responseDiv"\s+style="display:none">\s+(\{.*?\{.*?\}.*?\})',
+                    res.read(), re.S
+                )
+            quote = ast.literal_eval(match.group(1))['data'][0]
+            # code using lxml
+            # parser = lxml.etree.HTMLParser(encoding='utf-8')
+            # tree = lxml.etree.fromstring(res.read(), parser)
+            # doi = tree.xpath(self.xpath)
+            # quote = ast.literal_eval(doi[0].text.strip())['data'][0]
+
         except Exception, err:
             # control can come here when the stock code is invalid
+            print str(err)
             print '"%s" is invalid stock code' % code
             print 'If you are not sure about the stock code, try typing few characters of company name'
             print 'probable list based on current match:'
@@ -157,7 +197,21 @@ class NseDriver(object):
             sys.exit()
         else:
             return quote
-
+    def get_top_gainers(self):
+        url = self.top_gainer_url
+        request = urllib2.Request(url, None, self.headers)
+        try:
+            res = self.opener.open(request)
+        except HTTPError as error:
+            self.log.error('unable to open the link %s' % url)
+            self.log.error(str(error))
+            sys.exit()
+        except URLError as error:
+            self.log.error('no internet connection')
+            self.log.error(str(error))
+            sys.exit()
+        import json
+        res = res.read()
 
     def build_headers(self):
         ''' builds the headers for making http request '''
@@ -373,7 +427,18 @@ class DB(object):
             self.db.commit()
             self.log.debug('%s setting updated successfully' % setting)
 
+    def get_stock_name(self, code):
+        ''' fetches the stock name for the given code '''
+        self.log.debug('fetching stock name for %s' % code)
+        cur = self.db.cursor()
+        try:
+            cur.execute("SELECT NAME FROM STOCKS WHERE CODE == '%s'" % code.upper())
+            return str(cur.fetchone()[0])
 
+        except Exception, err:
+            self.log.error('error while fetching name from stocks table')
+            self.log.error(str(err))
+            sys.exit()
 
     def get_all_stock_list(self):
         ''' returns a dict with all stock codes as
@@ -450,17 +515,22 @@ else:
 #### INSTANTIATE CLASSES ####
 dirname, filename = os.path.split(os.path.abspath(__file__))
 db = DB(dirname + '/' + 'nse.db')
+fw = NseCliApp(db)
 nse = NseDriver(db)
 disp = NseDisplay(db)
 
 #### INTIALYZE DB FOR THE FIRST TIME USE ####
 if db.init is False:
-    db.create_stocks_table(nse.download_stock_csv())
-    db.init = True
-    db.create_config_table()
+    fw.init_db()
 
 if cli.code is not False:
-    disp.show_quote(nse.get_quote(cli.code))
+    # disp.show_quote(nse.get_quote(cli.code))
+    quote = nse.get_quote(cli.code)
+    fields = fw.get_display_fields()
+    name = db.get_stock_name(cli.code)
+    disp.show_quote(quote, display_fields=fields, stock_name=name)
+    db.get_stock_name(cli.code)
+
 else:
     if cli.current_display_fields is True:
         disp.show_current_display_fields()
@@ -472,5 +542,9 @@ else:
         disp.reset_display_fields()
     elif cli.remove_display_fields is not False:
         disp.remove_display_fields(cli.remove_display_fields)
-
+        # TODO: Add option to print headers
+        # TODO: refactor the whole code
+        # TODO: One more time think about DB and framework
+        # TODO: Add debug logs and sensible handling of exception
+        # TODO: documentation and concept of Mixins
 

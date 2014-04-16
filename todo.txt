@@ -5,4 +5,9 @@ Core features:
 - corporate actions
 - advance_declines
 - show indices
-- 
+-
+
+
+explore google apis for getting tick by tick information and historical information.
+plot the graph for today and historical data as well.
+release a API also which can be used by others for automation.
