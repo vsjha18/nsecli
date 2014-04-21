@@ -1,4 +1,37 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+''' 
+    NSECLI is a command line application for fetching live stock quotes 
+    for Indian stocks. It uses NSE data as the backend for getting the live 
+    quotes. 
+
+    It provides a rich command line interface to most of the important features 
+    available on National Stock Exchange's (NSE) official website. Apart from 
+    fetching live quotes for stocks, this app can also provide indices data, 
+    top gainers, top losers etc.
+
+
+    Key Features:
+    - Full featured CLI interface for accessing Indian Stock Quotes.
+    - Extremely fast access time. Gets a quote in less than 200 mili seconds.
+    - User can configure the fields displayed in the stock quotes.
+    - No need to remember stock code, it provides a fuzzy match in case of typos.
+    - Whole application is shipped as a single file.
+    - Completely documented features with examples.
+    - Uses only python standard modules hence hassle free installation.
+    - All users options are persistently stored in sqlite database.
+
+    For any details and use cases please refer to www.readthedocs.nsecli.com
+'''
+
+__author__ = "Vivek Jha"
+__copyright__ = "Copyright 2014"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Vivek Jha"
+__email__ = "vsjha18@gmail.com"
+__status__ = "Production"
+
 try:
     from urllib2 import HTTPError, URLError
     from cookielib import CookieJar
@@ -18,41 +51,40 @@ except Exception, err:
     exit()
 
 class NseCliApp(object):
+    ''' This is the main framework class which acts as a controller for 
+    for this application. It provide utilty methods to configure database,
+    store and fetch user settings, and handling all the command line options.
+    '''
+
     def __init__(self, db):
+        global LOG_LEVEL
+        logging.basicConfig(level=LOG_LEVEL)
+        self.log = logging.getLogger('App')
         self.db = db
 
+
     def init_db(self):
-        ''' initialyzes the database '''
+        ''' initialyzes the database:
+        - creates a table with the list of all stocks
+        - creates a table to store user configuration
+        '''
         db.create_stocks_table(nse.download_stock_csv())
         db.create_config_table()
         db.init = True
 
     def get_current_display_fields(self):
-        ''' shows current display fields '''
+        ''' returns a list of all current display fields '''
         display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
         return display_fields
-
-    def get_display_fields(self):
-        ''' returns a list of all the fields to be displayed '''
-        display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
-        return display_fields
-        # for key in display_fields:
-        #     if key in quote:
-        #         if key == 'pChange':
-        #             print key, ':', quote[key], '%'
-        #         else:
-        #             print key, ':', quote[key]
-        #     else:
-        #         print key, 'is not present in the quote'
 
     def get_all_display_fields(self):
-        ''' shows all display fields '''
+        ''' return a list of all display fields '''
         all_display_fields = self.db.get_config_setting('ALL_DISPLAY_FIELDS')
         return all_display_fields
 
     def add_display_fields(self, fields):
-        ''' adds all the display fields '''
-        self.log.debug('adding fileds %s' % fields)
+        ''' adds a list of display fields to the current display fields '''
+        self.log.debug('display fields to be added: %s' % fields)
         all_display_fields = self.db.get_config_setting('ALL_DISPLAY_FIELDS')
         current_display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
         FLAG_1 = False
@@ -61,9 +93,11 @@ class NseCliApp(object):
         invalid = []
 
         for field in fields:
+            # check of the given fields is already displayed
             if field in current_display_fields:
                 exists.append(field)
                 FLAG_1 = True
+            # check in the given field is valid
             if field not in all_display_fields:
                 invalid.append(field)
                 FLAG_2 = True
@@ -80,20 +114,21 @@ class NseCliApp(object):
         self.db.update_config_setting('DISPLAY_FIELDS',current_display_fields)
 
     def remove_display_fields(self, fields):
-        ''' removed the given list of display fields '''
-        self.log.debug('removing fileds %s' % fields)
+        ''' remove the list of fields from the list of display fields '''
+        self.log.debug('removing display fields: %s' % fields)
         current_display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
         FLAG = False
         invalid = []
 
         for field in fields:
+            # check if the given fields is the part of current display field
             if field not in current_display_fields:
                 invalid.append(field)
                 FLAG = True
             else:
                 current_display_fields.remove(field)
         if FLAG is True:
-            print "field %s doesn't in current display fields" % invalid
+            print "field %s doesn't exist in current display fields" % invalid
             print 'please provide valid inputs'
             sys.exit()
 
