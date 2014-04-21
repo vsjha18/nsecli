@@ -148,18 +148,18 @@ class NseDisplay(object):
     ''' NseDisplay contains all the function related to displaying
     and controlling display of results and quotes.
     '''
-    def __init__(self, db):
+    def __init__(self, db, header=True):
         global LOG_LEVEL
         logging.basicConfig(level=LOG_LEVEL)
         self.log = logging.getLogger('NseDisplay')
         self.db = db
+        self.header = header
 
     def show_quote(self, quote, display_fields, stock_name = None):
         ''' displays the quote based on the list of display fields
         quote is dictionary received from NSE
         '''
-        print stock_name
-        print '-----------------------'
+        self.print_header(stock_name)
         for field in display_fields:
             if field == 'pChange':
                 print '%-15s : %s' % (field, quote[field]) + '%'
@@ -172,10 +172,24 @@ class NseDisplay(object):
 
     def show_current_display_fields(self, fields):
         ''' shows current display fields '''
-        print 'Current display fields:'
+        self.print_header('Current Display Fields')
         for field in fields:
             print field
 
+    def show_all_display_fields(self, fields):
+        ''' accepts a list and display it '''
+        self.print_header('ALL DISPLAY FIELDS')
+        for field in fields:
+            print field
+
+    def print_header(self, string):
+        ''' prints a string like a header if self.header is
+        set to True, else it doesnt print anything'''
+        if self.header is True and string is not None:
+            l = len(string)
+            print '-'*l
+            print string
+            print '-'*l
 
 
 class NseDriver(object):
@@ -568,13 +582,19 @@ if cli.code is not False:
 
 else:
     if cli.current_display_fields is True:
-        disp.show_current_display_fields()
+        fields = db.get_config_setting('DISPLAY_FIELDS')
+        disp.show_current_display_fields(fields)
+
     elif cli.all_display_fields is True:
-        disp.show_all_display_fields()
+        fields = db.get_config_setting('ALL_DISPLAY_FIELDS')
+        disp.show_all_display_fields(fields)
+
     elif cli.add_display_fields is not False:
         disp.add_display_fields(cli.add_display_fields)
+
     elif cli.reset is True:
         disp.reset_display_fields()
+
     elif cli.remove_display_fields is not False:
         disp.remove_display_fields(cli.remove_display_fields)
         # TODO: Add option to print headers
@@ -582,4 +602,6 @@ else:
         # TODO: One more time think about DB and framework
         # TODO: Add debug logs and sensible handling of exception
         # TODO: documentation and concept of Mixins
+        # TODO: option to update the stock list
+        # TODO: option to hard_reset
 
