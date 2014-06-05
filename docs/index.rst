@@ -13,11 +13,21 @@ Contents:
    
 Introduction
 ------------
-This is a command line interface to National Stock Exchange (NSE). You will have access to all the important features,
-like checking the stock price and controlling your view etc.
 
-This is not just much faster than accessing the web but also more handy in case you are working in a unix envronment.
+NSE CLI is a command line interface to National Stock Exchange (NSE). It allows you to get fetch the detailed stock quote
+in real time. The command line interface is many folds faster than the web interface (www.nseindia.com) becuase it does't 
+have to download and render all the HTML and Java Script everytime you fetch the a stock quote.
 
+This is an added convinience for the people who use unix/linux at their workplace, because they don't need to switch the 
+window and for getting the market updates.
+
+Features & Highlights
+---------------------
+
+Here is the list of most important features of this application.
+
+   # Lighting fast speed, on broad band conncetions it takes less that 300 mili seconds to fetch a quote.
+   # 
 
 
 Indices and tables
