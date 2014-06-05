@@ -26,8 +26,20 @@ Features & Highlights
 
 Here is the list of most important features of this application.
 
-   # Lighting fast speed, on broad band conncetions it takes less that 300 mili seconds to fetch a quote.
-   # 
+#. Lighting fast speed! On broad band conncetions it takes less that 300 mili seconds to fetch a quote.
+
+#. All in one file. To keep the installation hassle free, all the code is in one file.
+   
+#. User configurable fields, the detailed quote. You can chose what fields you want to see.
+   
+#. Persistent configurations. It is not sesssion based.
+   
+#. Intutuive in use. You dont need to remember the stock code. It assists you in finding the right code.
+   
+#. No dependency on third party packages. Uses only standard modules and packages available in the python installation.
+
+   
+ 
 
 
 Indices and tables
