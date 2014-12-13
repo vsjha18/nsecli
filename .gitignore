@@ -19,6 +19,10 @@ lib
 lib64
 __pycache__
 
+# VIM Backup files 
+*~
+# DB Files 
+*.db
 # Installer logs
 pip-log.txt
 

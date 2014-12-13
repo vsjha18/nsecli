@@ -4,7 +4,6 @@ try:
     from cookielib import CookieJar
     import urllib2
     import urllib
-    import lxml.etree
     import ast
     import sys
     import sqlite3
