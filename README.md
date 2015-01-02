@@ -1,5 +1,4 @@
-[ ** This project is under development and will be production ready by April 15th, 2014 **]
-
+This work is in progress ....
 Introduction
 --------------
 
