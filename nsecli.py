@@ -1,18 +1,20 @@
 #!/usr/bin/env python
+
 try:
-    from urllib2 import HTTPError, URLError
-    from cookielib import CookieJar
-    import urllib2
+    from urllib.error import HTTPError, URLError
+    from http.cookiejar import CookieJar
     import urllib
-    import ast
     import sys
     import sqlite3
     import os
     import argparse
+    import lxml.etree
     import logging
-except Exception, err:
-    print 'error while importing module or package'
-    print str(err)
+    import json
+    from pprint import pprint
+except Exception as err:
+    print('error while importing module or package')
+    print(str(err))
     exit()
 
 
@@ -32,25 +34,25 @@ class NseDisplay(object):
         for key in display_fields:
             if key in quote:
                 if key == 'pChange':
-                    print key, ':', quote[key], '%'
+                    print (key, ':', quote[key], '%')
                 else:
-                    print key, ':', quote[key]
+                    print (key, ':', quote[key])
             else:
-                print key, 'is not present in the quote'
+                print (key, 'is not present in the quote')
 
     def show_current_display_fields(self):
         ''' shows current display fields '''
         display_fields = self.db.get_config_setting('DISPLAY_FIELDS')
-        print 'Current display fields:'
+        print ('Current display fields:')
         for field in display_fields:
-            print field
+            print (field)
 
     def show_all_display_fields(self):
         ''' shows all display fields '''
         all_display_fields = self.db.get_config_setting('ALL_DISPLAY_FIELDS')
-        print 'All display fields:'
+        print ('All display fields:')
         for field in all_display_fields:
-            print field
+            print (field)
 
     def add_display_fields(self, fields):
         ''' adds all the display fields '''
@@ -70,11 +72,11 @@ class NseDisplay(object):
                 invalid.append(field)
                 FLAG_2 = True
         if FLAG_1 is True:
-            print 'field %s already exists' % exists
+            print('field %s already exists' % exists)
         if FLAG_2 is True:
-            print 'field %s is invalid' % invalid
+            print ('field %s is invalid' % invalid)
         if FLAG_1 is True or FLAG_2 is True:
-            print 'please provide valid inputs'
+            print ('please provide valid inputs')
             sys.exit()
 
         # update the data base with current field
@@ -95,8 +97,8 @@ class NseDisplay(object):
             else:
                 current_display_fields.remove(field)
         if FLAG is True:
-            print "field %s doesn't in current display fields" % invalid
-            print 'please provide valid inputs'
+            print ("field %s doesn't in current display fields" % invalid)
+            print ('please provide valid inputs')
             sys.exit()
 
         # update the data base with current field
@@ -120,17 +122,17 @@ class NseDriver(object):
         logging.basicConfig(level=LOG_LEVEL)
         self.log = logging.getLogger('NseDriver')
         self.db = db
-        self.baseurl = 'http://nseindia.com/live_market/dynaContent/live_watch/get_quote/GetQuote.jsp?'
+        self.baseurl = 'https://nseindia.com/live_market/dynaContent/live_watch/get_quote/GetQuote.jsp?'
         self.opener = self.build_opener()
         self.headers = self.build_headers()
         self.xpath = '//*[@id="responseDiv"]'
-        self.code_csv_url = 'http://www.nseindia.com/content/equities/EQUITY_L.csv'
+        self.code_csv_url = 'https://www.nseindia.com/content/equities/EQUITY_L.csv'
 
     def get_quote(self, code):
         ''' gets the stock details by querying the market'''
         # TODO: Handle invalid stock codes
         url = self.build_url(code)
-        request = urllib2.Request(url, None, self.headers)
+        request = urllib.request.Request(url, None, self.headers)
         try:
             res = self.opener.open(request)
         except HTTPError as error:
@@ -141,21 +143,22 @@ class NseDriver(object):
             self.log.error('no internet connection')
             self.log.error(str(error))
             sys.exit()
-        try:
-            parser = lxml.etree.HTMLParser(encoding='utf-8')
-            tree = lxml.etree.fromstring(res.read(), parser)
-            # doi = data of interest
-            doi = tree.xpath(self.xpath)
-            quote = ast.literal_eval(doi[0].text.strip())['data'][0]
-        except Exception, err:
-            # control can come here when the stock code is invalid
-            print '"%s" is invalid stock code' % code
-            print 'If you are not sure about the stock code, try typing few characters of company name'
-            print 'probable list based on current match:'
-            self.print_probable_matches(code)
-            sys.exit()
-        else:
-            return quote
+        
+#        try:
+        parser = lxml.etree.HTMLParser(encoding='utf-8')
+        tree = lxml.etree.fromstring(res.read(), parser)
+        # doi = data of interest
+        doi = tree.xpath(self.xpath)
+        quote = json.loads(doi[0].text.strip())['data'][0]
+        # except Exception as err:
+        #     # control can come here when the stock code is invalid
+        #     print ('"%s" is invalid stock code' % code)
+        #     print ('If you are not sure about the stock code, try typing few characters of company name')
+        #     print ('probable list based on current match:')
+        #     self.print_probable_matches(code)
+        #     sys.exit()
+#        else:
+        return quote
 
 
     def build_headers(self):
@@ -163,7 +166,7 @@ class NseDriver(object):
         headers = {'Accept' : '*/*',
             'Accept-Language': 'en-US,en;q=0.5',
             'Host':    'nseindia.com',
-            'Referer': 'http://nseindia.com/live_market/dynaContent/live_watch/get_quote/GetQuote.jsp?symbol=INFY&illiquid=0',
+            'Referer': 'https://nseindia.com/live_market/dynaContent/live_watch/get_quote/GetQuote.jsp?symbol=INFY&illiquid=0',
             'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0',
             'X-Requested-With':    'XMLHttpRequest'
             }
@@ -171,26 +174,33 @@ class NseDriver(object):
 
     def download_stock_csv(self):
         ''' downloads the csv file '''
-        try:
-            request = urllib2.Request(self.code_csv_url, None, self.headers)
-            res = self.opener.open(request)
-        except HTTPError as error:
-            print 'unable to open the link %s' % self.code_csv_url
-            print str(error)
-        except URLError as error:
-            print 'no internet connection'
-            print str(error)
-        return res.read()
+        # try:
+        #     request = urllib.request.Request(self.code_csv_url, None, self.headers)
+        #     res = self.opener.open(request)
+        # except HTTPError as error:
+        #     print ('unable to open the link %s' % self.code_csv_url)
+        #     print (str(error))
+        # except URLError as error:
+        #     print ('no internet connection')
+        #     print (str(error))
+        
+        # data = res.read().decode("utf-16")
+
+        data = ""
+        with open('EQUITY_L.csv', 'r') as csvfile:
+            data = csvfile.readlines()
+
+        return data
 
     def build_opener(self):
         ''' builds the opener required for the making http req '''
         cj = CookieJar()
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         return opener
 
     def build_url(self, code):
         ''' makes the right url string for fetching a quote '''
-        encoded_args = urllib.urlencode({'symbol':code, 'illiquid': '0'})
+        encoded_args = urllib.parse.urlencode({'symbol':code, 'illiquid': '0'})
         url = self.baseurl + encoded_args
         return url
 
@@ -199,11 +209,9 @@ class NseDriver(object):
         there respective codes
         '''
         sdict = self.db.get_all_stock_list()
-        for key, value in sdict.iteritems():
+        for key, value in sdict.items():
             if code.lower() in value.lower():
-                print key,'\t\t', value
-
-
+                print (key,'\t\t', value)
 
 class DB(object):
     ''' This class abstracts all the data access needs for other classes.
@@ -228,7 +236,7 @@ class DB(object):
             self.init = True
         try:
             self.db = sqlite3.connect(self.db_path)
-        except Exception, err:
+        except Exception as err:
             self.log.error('Error while connecting to database')
             self.log.error(str(err))
             sys.exit()
@@ -241,14 +249,14 @@ class DB(object):
         try:
             self.db.execute('CREATE TABLE STOCKS\
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT, CODE TEXT, NAME TEXT)')
-        except Exception, e:
+        except Exception as e:
             self.log.error('stocks table already exists !!')
-            print str(e)
+            print (str(e))
             sys.exit()
 
         c = self.db.cursor()
         try:
-            for line in csv.split('\n'):
+            for line in csv:
                 # skip the header line
                 if 'NAME OF COMPANY' in line:
                     continue
@@ -257,8 +265,8 @@ class DB(object):
                     continue
                 else:
                     code, name = line.split(',')[0:2]
-                    c.execute('INSERT INTO STOCKS (CODE,NAME) VALUES("%s","%s")' % (code,name))
-        except Exception, e:
+                    c.execute('INSERT INTO STOCKS (CODE,NAME) VALUES("%s","%s")' % (code, name))
+        except Exception as e:
             self.log.error('error while inserting rows to stocks table from csv file')
             self.log.error(str(e))
             self.db.rollback()
@@ -275,9 +283,9 @@ class DB(object):
             self.db.execute('CREATE TABLE CONFIG\
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,\
                             SETTING TEXT, VALUE TEXT)')
-        except Exception, e:
+        except Exception as e:
             self.log.error('config table already exists !!')
-            print str(e)
+            print (str(e))
             sys.exit()
         self.log.debug('config table created')
 
@@ -291,7 +299,7 @@ class DB(object):
             c.execute("INSERT INTO CONFIG (SETTING, VALUE) VALUES(\
                       'DEFAULT_DISPLAY_FIELDS', \
                       'lastPrice change pChange open dayHigh dayLow closePrice previousClose high52 low52')")
-        except Exception, err:
+        except Exception as err:
             self.log.error('error while inserting DISPLAY_FIELDS or DEFAULT_DISPLAY_FIELDS setting')
             self.log.error(str(err))
             self.db.rollback()
@@ -324,7 +332,7 @@ class DB(object):
             c.execute("INSERT INTO CONFIG (SETTING, VALUE) VALUES(\
                       'ALL_DISPLAY_FIELDS', \
                       '%s')" % all_fields)
-        except Exception, err:
+        except Exception as err:
             self.log.error('error while inserting ALL_DISPLAY_FIELDS setting')
             self.log.error(str(err))
             self.db.rollback()
@@ -339,7 +347,7 @@ class DB(object):
         c = self.db.cursor()
         try:
             c.execute('SELECT VALUE FROM CONFIG WHERE SETTING = "%s"' % setting)
-        except Exception, err:
+        except Exception as err:
             self.log.error('error while fetching setting %s' % setting)
             self.log.error(str(err))
             sys.exit()
@@ -363,7 +371,7 @@ class DB(object):
         try:
             c.execute("UPDATE CONFIG SET VALUE = '%s' WHERE SETTING = '%s'" %
                       (value, setting))
-        except Exception, err:
+        except Exception as err:
             self.log.error('error while updating %s' % setting)
             self.log.error(str(err))
             self.db.rollback()
@@ -380,7 +388,7 @@ class DB(object):
         cur = self.db.cursor()
         try:
             cur.execute('SELECT * FROM STOCKS')
-        except Exception, err:
+        except Exception as err:
             self.log.error('error while fetch all stocks details')
             sys.exit()
         sdict = {}
@@ -471,5 +479,3 @@ else:
         disp.reset_display_fields()
     elif cli.remove_display_fields is not False:
         disp.remove_display_fields(cli.remove_display_fields)
-
-
