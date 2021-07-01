@@ -24,6 +24,7 @@ class NseDisplay(object):
         global LOG_LEVEL
         logging.basicConfig(level=LOG_LEVEL)
         self.log = logging.getLogger('NseDisplay')
+        print ("hello world")
         self.db = db
 
     def show_quote(self, quote):
